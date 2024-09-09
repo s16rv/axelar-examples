@@ -18,3 +18,21 @@ echo "\n#### 4. Activate EVM Chains ####"
 
 echo "\n#### 5. Activate Cosmos Chains ####"
 "${DIR}/steps/05-activate-cosmos-chain.sh" ${COSMOS_CHAIN}
+
+echo "\n#### 6. Register Controller ####"
+"${DIR}/steps/06-register-controller.sh"
+
+echo "\n#### 7. Setup keygen ####"
+"${DIR}/steps/07-setup-keygen.sh"
+
+echo "\n#### Waiting 10 seconds before rotating keygen ####"
+sleep 10
+
+echo "\n#### 8. Rotate keygen ####"
+"${DIR}/steps/08-rotate-keygen.sh"
+
+echo "\n#### Waiting 10 seconds before registering gateway ####"
+sleep 10
+
+echo "\n#### 9. Register gateway ethereum ####"
+"${DIR}/steps/09-register-gateway-ethereum.sh"

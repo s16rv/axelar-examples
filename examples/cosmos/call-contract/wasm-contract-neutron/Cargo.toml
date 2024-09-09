@@ -1,0 +1,27 @@
+[package]
+name = "send-receive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-schema = "2.1.0"
+cosmwasm-std = "2.1.0"
+cw-storage-plus = "2.0.0"
+cw2 = "1.0.1"
+ethabi = { version = "18.0.0", default-features = false, features = [] }
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
+serde-json-wasm = "0.5.1"
+cw-utils = "2.0.0"
+neutron-sdk = "0.11.0"
+
+[dev-dependencies]
+cw-multi-test = "0.16.2"

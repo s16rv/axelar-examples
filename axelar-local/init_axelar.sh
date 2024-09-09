@@ -4,9 +4,15 @@ DENOM=uaxl
 CHAIN_ID=axelar
 MONIKER=axelar
 HOME_PATH=$HOME/.axelar
+DIR="$(dirname "$0")"
 
 MNEMONIC_RELAYER="use glove remain glance twin scout tank seminar purchase mix window illness"
 MNEMONIC_RELAYER2="clown text faith prosper mushroom virtual decline chimney auto special differ garlic"
+
+MNEMONIC_GOV1="rate cradle rescue rate still reveal rent brass high radar doctor drama cement another sick rug actual elbow fence orange salon motor walnut renew"
+MNEMONIC_GOV2="season brief melt duck draw science tilt train april regret laptop rabbit pretty neck accuse glad stone armed convince math fever now improve wire"
+
+OWNER="confirm boost crisp father lion act leisure opera iron wedding donate mixture pitch east differ famous picnic pen attract capital reform creek outer you"
 
 # Removing the existing directory to start with a clean slate
 rm -rf ${HOME_PATH}/*
@@ -27,19 +33,13 @@ sed -i "s/\"stake\"/\"$DENOM\"/" "$HOME_PATH"/config/genesis.json && echo "Updat
 echo $MNEMONIC_RELAYER | axelard keys add relayer --recover ${DEFAULT_KEYS_FLAGS}
 echo $MNEMONIC_RELAYER2 | axelard keys add relayer2 --recover ${DEFAULT_KEYS_FLAGS}
 
-# Adding a new key named 'owner' with a test keyring-backend in the specified home directory
-# and storing the mnemonic in the mnemonic.txt file
-mnemonic=$(axelard keys add owner ${DEFAULT_KEYS_FLAGS} 2>&1 | tail -n 1)
-echo ${mnemonic} | tr -d "\n" > ${HOME_PATH}/mnemonic.txt
-echo "Added new key 'owner'"
-
-gov1_mnemonic=$(axelard keys add gov1 ${DEFAULT_KEYS_FLAGS} 2>&1 | tail -n 1)
-echo ${gov1_mnemonic} | tr -d "\n" > ${HOME_PATH}/mnemonic-gov1.txt
+echo $MNEMONIC_GOV1 | axelard keys add gov1 --recover ${DEFAULT_KEYS_FLAGS}
 echo "Added new key 'gov1'"
-
-gov2_mnemonic=$(axelard keys add gov2 ${DEFAULT_KEYS_FLAGS} 2>&1 | tail -n 1)
-echo ${gov2_mnemonic} | tr -d "\n" > ${HOME_PATH}/mnemonic-gov2.txt
+echo $MNEMONIC_GOV2 | axelard keys add gov2 --recover ${DEFAULT_KEYS_FLAGS}
 echo "Added new key 'gov2'"
+
+echo $OWNER | axelard keys add owner --recover ${DEFAULT_KEYS_FLAGS}
+echo "Added new key 'owner'"
 
 $(axelard keys add governance --multisig "gov1,gov2" --multisig-threshold 1 --nosort ${DEFAULT_KEYS_FLAGS} 2>&1 | tail -n 1)
 echo "Added new key 'governance'"
@@ -76,15 +76,15 @@ axelard set-genesis-slashing --signed-blocks-window 35000 --min-signed-per-windo
 --downtime-jail-duration 600s --slash-fraction-double-sign 0.02 --slash-fraction-downtime 0.0001 --home ${HOME_PATH}
 axelard set-genesis-snapshot --min-proxy-balance 5000000 --home ${HOME_PATH}
 axelard set-genesis-staking  --unbonding-period 168h --max-validators 50 --bond-denom "$DENOM" --home ${HOME_PATH}
-axelard set-genesis-chain-params evm Ethereum --evm-network-name ethereum --evm-chain-id 5 --network ethereum --confirmation-height 1 --revote-locking-period 5 --home ${HOME_PATH}
+axelard set-genesis-chain-params evm Ethereum --evm-network-name ethereum --evm-chain-id 11155111 --network ethereum --confirmation-height 1 --revote-locking-period 5 --home ${HOME_PATH}
 
 GOV_1_KEY="$(axelard keys show gov1 ${DEFAULT_KEYS_FLAGS} -p)"
 GOV_2_KEY="$(axelard keys show gov2 ${DEFAULT_KEYS_FLAGS} -p)"
 axelard set-governance-key 1 "$GOV_1_KEY" "$GOV_2_KEY" --home ${HOME_PATH}
 axelard validate-genesis --home ${HOME_PATH}
 
-# Generating a new genesis transaction for 'owner' delegating 70000000${DENOM} in the blockchain with the specified chain-id
-axelard gentx owner 70000000${DENOM} \
+# Generating a new genesis transaction for 'owner' delegating 100000000${DENOM} in the blockchain with the specified chain-id
+axelard gentx owner 100000000${DENOM} \
 --home ${HOME_PATH} \
 --keyring-backend test \
 --moniker ${MONIKER} \
@@ -95,7 +95,7 @@ axelard collect-gentxs \
 --home ${HOME_PATH} > /dev/null 2>&1 && echo "Collected genesis transactions"
 
 # Read the content of the local file and append it to the file inside the Docker container
-cat ./libs/evm-rpc.toml >> "$HOME_PATH"/config/config.toml
+cat "${DIR}/libs/evm-rpc.toml" >> "$HOME_PATH"/config/config.toml
 
 # Starting the blockchain node with the specified home directory
 axelard start --log_level info --home ${HOME_PATH} \

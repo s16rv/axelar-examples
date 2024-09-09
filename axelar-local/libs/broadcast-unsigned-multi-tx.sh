@@ -25,7 +25,7 @@ fi
 
 # Multisign the signed transaction
 if ! axelard tx multisign "$UNSIGNED_MSG_PATH" governance "$SIGNED_TX_PATH" \
-  --from owner --chain-id "$CHAIN_ID" ${DEFAULT_KEYS_FLAGS} > "$TX_MS_PATH" 2>&1; then
+  --chain-id "$CHAIN_ID" ${DEFAULT_KEYS_FLAGS} > "$TX_MS_PATH" 2>&1; then
   echo "Failed to multisign transaction. Check $TX_MS_PATH for details."
   exit 1
 fi

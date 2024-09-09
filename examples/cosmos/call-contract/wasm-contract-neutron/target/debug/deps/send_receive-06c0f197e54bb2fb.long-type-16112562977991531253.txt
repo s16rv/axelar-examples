@@ -1,0 +1,1 @@
+for<'a> fn(cosmwasm_std::DepsMut<'a>, cosmwasm_std::Env, cosmwasm_std::MessageInfo, msg::InstantiateMsg) -> std::result::Result<cosmwasm_std::Response, error::ContractError> {contract::instantiate}
