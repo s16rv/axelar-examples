@@ -139,7 +139,7 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
 
     // Deploy Account contract
     const Account = await ethers.getContractFactory("AccountWithoutSignature");
-    account = await Account.deploy(owner.address);
+    account = await Account.deploy(owner.address, entryPoint.address);
     await account.deployed();
 
     await owner.sendTransaction({
