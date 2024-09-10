@@ -5,7 +5,7 @@ contract AccountWithoutSignature {
     address public owner;
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
-    event TransactionExecuted(address indexed target, uint256 value, bytes data);
+    event TransactionExecuted(address indexed dest, uint256 value, bytes data);
     event FundSent(address indexed receiver, uint amount);
 
     constructor(address _owner) {
@@ -29,11 +29,18 @@ contract AccountWithoutSignature {
     }
 
     // Allow the contract to execute arbitrary transactions
-    function executeTransaction(address target, uint256 value, bytes memory data) public returns (bytes memory) {
-        (bool success, bytes memory returnData) = target.call{value: value}(data);
-        require(success, "Transaction failed");
-        emit TransactionExecuted(target, value, data);
-        return returnData;
+    function executeTransaction(address dest, uint256 value, bytes calldata data) external {
+        _call(dest, value, data);
+        emit TransactionExecuted(dest, value, data);
+    }
+
+    function _call(address target, uint256 value, bytes memory data) internal {
+        (bool success, bytes memory result) = target.call{value: value}(data);
+        if (!success) {
+            assembly {
+                revert(add(result, 32), mload(result))
+            }
+        }
     }
 
     // Allow the contract to receive Ether
