@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { keccak256, defaultAbiCoder, toUtf8Bytes, solidityPack } = require('ethers/lib/utils');
 const { ecsign } = require('ethereumjs-util');
+const { Account } = require("@multiversx/sdk-core/out");
 
 describe("EntryPoint and Account Contracts", function () {
   let entryPoint;
@@ -132,15 +133,27 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
   beforeEach(async function () {
     [owner, user] = await ethers.getSigners();
 
+    const MockGateway = await ethers.getContractFactory("MockGateway");
+    const mockGateway = await MockGateway.deploy();
+
     // Deploy EntryPointWithoutSignature contract
     const EntryPointWithoutSignature = await ethers.getContractFactory("EntryPointWithoutSignature");
-    entryPoint = await EntryPointWithoutSignature.deploy();
+    entryPoint = await EntryPointWithoutSignature.deploy(mockGateway.address, "0xbE406F0189A0B4cf3A05C286473D23791Dd44Cc6");
     await entryPoint.deployed();
 
-    // Deploy Account contract
-    const Account = await ethers.getContractFactory("AccountWithoutSignature");
-    account = await Account.deploy(owner.address, entryPoint.address);
-    await account.deployed();
+    const commandId = ethers.utils.formatBytes32String("commandId");
+    const sourceChain = "sourceChain";
+    const sourceAddress = user.address;
+    const payload = ethers.utils.defaultAbiCoder.encode(
+      ["uint8", "address"],
+      [1, owner.address],
+    );
+
+    await mockGateway.setCallValid(true);
+    const tx = await entryPoint.execute(commandId, sourceChain, sourceAddress, payload);
+    const receipt = await tx.wait();
+    const event = receipt.events.find((e) => e.event === "AccountCreated");
+    account = await ethers.getContractAt("AccountWithoutSignature", event.args[0]);
 
     await owner.sendTransaction({
       to: account.address,
@@ -159,7 +172,15 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
     const data = account.interface.encodeFunctionData("executeTransaction", [user.address, amountToSend, "0x"]);
 
     // Execute transaction from the Account contract
-    await entryPoint.handleTransaction(account.address, 0, data);
+    const commandId = ethers.utils.formatBytes32String("commandId");
+    const sourceChain = "sourceChain";
+    const sourceAddress = "sourceAddress";
+    const payload = ethers.utils.defaultAbiCoder.encode(
+      ["uint8", "address", "bytes"],
+      [2, account.address, data],
+    );
+    console.log("Payload :", payload)
+    await entryPoint.execute(commandId, sourceChain, sourceAddress, payload);
 
     // Verify that the owner received the Ether
     expect(await ethers.provider.getBalance(user.address)).to.equal(initialOwnerBalance.add(amountToSend));

@@ -10,9 +10,9 @@ contract AccountWithoutSignature {
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event TransactionExecuted(address indexed dest, uint256 value, bytes data);
 
-    constructor(address _owner, EntryPointWithoutSignature _entryPointAddr) {
+    constructor(address _owner, address _entryPointAddr) {
         owner = _owner;
-        _entryPoint = _entryPointAddr;
+        _entryPoint = EntryPointWithoutSignature(_entryPointAddr);
     }
 
     modifier onlyOwner() {
