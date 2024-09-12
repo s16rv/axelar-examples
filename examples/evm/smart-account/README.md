@@ -1,0 +1,1 @@
+npm run deploy evm/smart-account testnet "Ethereum-Sepolia"
