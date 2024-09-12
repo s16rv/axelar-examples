@@ -33,14 +33,14 @@ const AXELAR_GMP_ADDRESS: &str = "axelar1dv4u5k73pzqrxlzujxg3qp8kvc3pje7jtdvu72n
 
 enum Transaction {
     CreateAccount = 1,
-    // HandleTransaction = 2,
+    HandleTransaction = 2,
 }
 
 impl Transaction {
     fn to_uint(&self) -> U256 {
         match self {
             Transaction::CreateAccount => U256::from(1),
-            // Transaction::HandleTransaction => U256::from(2),
+            Transaction::HandleTransaction => U256::from(2),
         }
     }
 }
@@ -81,13 +81,38 @@ pub fn execute(
             destination_address,
             address,
         ),
-        SendTransactionEvm { destination_chain, destination_address, address, data } => todo!(),
+        SendTransactionEvm { 
+            destination_chain,
+            destination_address,
+            smart_account_address,
+            tx_payload,
+        } => exec::send_transaction_evm(
+                deps,
+                env,
+                info,
+                destination_chain, 
+                destination_address, 
+                smart_account_address, 
+                tx_payload,
+        ),
+        SendTransactionEvmRaw { 
+            destination_chain,
+            destination_address,
+            payload,
+        } => exec::send_transaction_evm_raw(
+                deps,
+                env,
+                info,
+                destination_chain, 
+                destination_address, 
+                payload,
+        ),
     }
 }
 
 mod exec {
     use cw_utils::one_coin;
-    use neutron_sdk::{bindings::{msg::NeutronMsg, query::NeutronQuery}, query::min_ibc_fee::query_min_ibc_fee, sudo::msg::RequestPacketTimeoutHeight, NeutronResult};
+    use neutron_sdk::{bindings::{msg::NeutronMsg, query::NeutronQuery, types::decode_hex}, query::min_ibc_fee::query_min_ibc_fee, sudo::msg::RequestPacketTimeoutHeight, NeutronResult};
 
     use super::*;
 
@@ -117,6 +142,108 @@ mod exec {
             destination_chain,
             destination_address,
             payload: message_payload.to_vec(),
+            type_: 1,
+            fee,
+        };
+
+        let config = CONFIG.load(deps.storage)?;
+
+        let fee = min_ntrn_ibc_fee(query_min_ibc_fee(deps.as_ref())?.min_fee);
+        let ibc_message = NeutronMsg::IbcTransfer {
+            source_port: "transfer".to_string(),
+            source_channel: config.channel.to_string(),
+            token: coin,
+            sender: env.contract.address.to_string(),
+            receiver: AXELAR_GMP_ADDRESS.to_string(),
+            timeout_height: RequestPacketTimeoutHeight {
+                revision_height: Some(0),
+                revision_number: Some(0),
+            },
+            timeout_timestamp: env.block.time.plus_seconds(604_800u64).nanos(),
+            memo: to_string(&gmp_message).unwrap(),
+            fee,
+        };
+
+        Ok(Response::new().add_message(ibc_message))
+    }
+
+    pub fn send_transaction_evm(
+        deps: DepsMut<NeutronQuery>,
+        env: Env,
+        info: MessageInfo,
+        destination_chain: String,
+        destination_address: String,
+        smart_account_address: String,
+        tx_payload: String,
+    ) -> NeutronResult<Response<NeutronMsg>> {
+        // Message payload to be received by the destination
+        let tx_payload_bytes = decode_hex(&tx_payload).expect("Failed to decode tx payload");
+        let message_payload = encode(&vec![
+            Token::Uint(Transaction::HandleTransaction.to_uint()),
+            Token::String(smart_account_address),
+            Token::FixedBytes(tx_payload_bytes),
+        ]);
+
+        // {info.funds} used to pay gas. Must only contain 1 token type.
+        let coin: cosmwasm_std::Coin = one_coin(&info).unwrap();
+
+        let fee: Option<Fee> = Some(Fee {
+            amount: coin.amount.to_string(),
+            recipient: AXELAR_FEE_RECIPIENT.to_string(),
+        });
+
+        let gmp_message: GmpMessage = GmpMessage {
+            destination_chain,
+            destination_address,
+            payload: message_payload.to_vec(),
+            type_: 1,
+            fee,
+        };
+
+        let config = CONFIG.load(deps.storage)?;
+
+        let fee = min_ntrn_ibc_fee(query_min_ibc_fee(deps.as_ref())?.min_fee);
+        let ibc_message = NeutronMsg::IbcTransfer {
+            source_port: "transfer".to_string(),
+            source_channel: config.channel.to_string(),
+            token: coin,
+            sender: env.contract.address.to_string(),
+            receiver: AXELAR_GMP_ADDRESS.to_string(),
+            timeout_height: RequestPacketTimeoutHeight {
+                revision_height: Some(0),
+                revision_number: Some(0),
+            },
+            timeout_timestamp: env.block.time.plus_seconds(604_800u64).nanos(),
+            memo: to_string(&gmp_message).unwrap(),
+            fee,
+        };
+
+        Ok(Response::new().add_message(ibc_message))
+    }
+
+    pub fn send_transaction_evm_raw(
+        deps: DepsMut<NeutronQuery>,
+        env: Env,
+        info: MessageInfo,
+        destination_chain: String,
+        destination_address: String,
+        payload: String,
+    ) -> NeutronResult<Response<NeutronMsg>> {
+        // Message payload to be received by the destination
+        let payload_bytes = decode_hex(&payload).expect("Failed to decode payload");
+
+        // {info.funds} used to pay gas. Must only contain 1 token type.
+        let coin: cosmwasm_std::Coin = one_coin(&info).unwrap();
+
+        let fee: Option<Fee> = Some(Fee {
+            amount: coin.amount.to_string(),
+            recipient: AXELAR_FEE_RECIPIENT.to_string(),
+        });
+
+        let gmp_message: GmpMessage = GmpMessage {
+            destination_chain,
+            destination_address,
+            payload: payload_bytes.to_vec(),
             type_: 1,
             fee,
         };

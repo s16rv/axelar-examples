@@ -166,10 +166,12 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
   });
 
   it("should execute transactions from Account contract", async function () {
-    const initialOwnerBalance = await ethers.provider.getBalance(user.address);
-    const amountToSend = ethers.utils.parseEther("1.0");
+    const recipient = user.address;
+    const initialOwnerBalance = await ethers.provider.getBalance(recipient);
+    const amountToSend = ethers.utils.parseEther("0.001");
 
-    const data = account.interface.encodeFunctionData("executeTransaction", [user.address, amountToSend, "0x"]);
+    const data = account.interface.encodeFunctionData("executeTransaction", [recipient, amountToSend, "0x"]);
+    console.log("executeTransaction data :", data)
 
     // Execute transaction from the Account contract
     const commandId = ethers.utils.formatBytes32String("commandId");
@@ -179,10 +181,10 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
       ["uint8", "address", "bytes"],
       [2, account.address, data],
     );
-    console.log("Payload :", payload)
+    console.log("Payload :", payload, "\n")
     await entryPoint.execute(commandId, sourceChain, sourceAddress, payload);
 
     // Verify that the owner received the Ether
-    expect(await ethers.provider.getBalance(user.address)).to.equal(initialOwnerBalance.add(amountToSend));
+    expect(await ethers.provider.getBalance(recipient)).to.equal(initialOwnerBalance.add(amountToSend));
   });
 });

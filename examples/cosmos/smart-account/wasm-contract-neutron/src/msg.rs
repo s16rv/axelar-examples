@@ -15,8 +15,13 @@ pub enum ExecuteMsg {
     SendTransactionEvm {
         destination_chain: String,
         destination_address: String,
-        address: String,
-        data: String,
+        smart_account_address: String,
+        tx_payload: String,
+    },
+    SendTransactionEvmRaw {
+        destination_chain: String,
+        destination_address: String,
+        payload: String,
     },
 }
 
