@@ -1,8 +1,15 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { keccak256, defaultAbiCoder, toUtf8Bytes, solidityPack } = require('ethers/lib/utils');
+const { sha256, defaultAbiCoder, toUtf8Bytes, solidityPack } = require('ethers/lib/utils');
 const { ecsign } = require('ethereumjs-util');
 const { Account } = require("@multiversx/sdk-core/out");
+
+const TX_BYTES_A_1 = "CoECCv4BCiUvaW50ZXJjaGFpbmF1dGguaWNhdXRoLnYxLk1zZ1N1Ym1pdFR4EtQBCi1jb3Ntb3MxenlwcWE3NmplN3B4c2R3a2ZhaDZtdTlhNTgzc2p1NnhxdDNtdjYSCWNoYW5uZWwtMBqQAQocL2Nvc21vcy5iYW5rLnYxYmV0YTEuTXNnU2VuZBJwCi1jb3Ntb3MxenlwcWE3NmplN3B4c2R3a2ZhaDZtdTlhNTgzc2p1NnhxdDNtdjYSLWNvc21vczFtZ3A3cW52dW1obGNxNmU0ejJxMDVyMjlkY2hjeXVnMHozenhlZxoQCgV1YmV0YRIHMjAwMDAwMCCAoPHCsTQSWApQCkYKHy9jb3Ntb3MuY3J5cHRvLnNlY3AyNTZrMS5QdWJLZXkSIwohApC+f+iGx0i+gOmLNA0UGNC/54ZWde5ZfZ2FBSZSAIXwEgQKAggBGAESBBDAmgwaB2FscGhhLTE="
+const TX_BYTES_A_2 = "CoECCv4BCiUvaW50ZXJjaGFpbmF1dGguaWNhdXRoLnYxLk1zZ1N1Ym1pdFR4EtQBCi1jb3Ntb3MxenlwcWE3NmplN3B4c2R3a2ZhaDZtdTlhNTgzc2p1NnhxdDNtdjYSCWNoYW5uZWwtMBqQAQocL2Nvc21vcy5iYW5rLnYxYmV0YTEuTXNnU2VuZBJwCi1jb3Ntb3MxenlwcWE3NmplN3B4c2R3a2ZhaDZtdTlhNTgzc2p1NnhxdDNtdjYSLWNvc21vczFtZ3A3cW52dW1obGNxNmU0ejJxMDVyMjlkY2hjeXVnMHozenhlZxoQCgV1YmV0YRIHMjAwMDAwMCCAoPHCsTQSWApQCkYKHy9jb3Ntb3MuY3J5cHRvLnNlY3AyNTZrMS5QdWJLZXkSIwohApC+f+iGx0i+gOmLNA0UGNC/54ZWde5ZfZ2FBSZSAIXwEgQKAggBGAISBBDAmgwaB2FscGhhLTE="
+const SIGNATURE_A_1 = "GHUe6rGUxcUuzLnjYJ8qE+qYoHkTjcKdr2c5Ea4mCJlzrMvDi6sZZCNO4K6taTiaeYmMgL+MNXBjMinM9fJKHg=="
+const SIGNATURE_A_2 = "0A5QeQgokPkkOxxYgdw+shCF+3nwr1eq4fxhax+kQ+J3TycL0JpeF4CuSDyvnUHwGMQk4ecx/15cl9CzJtUbgw=="
+
+const EXPECTED_SIGNER = "0x07557D755E777B85d878D34861cd52126524a155"
 
 describe("EntryPoint and Account Contracts", function () {
   let entryPoint;
@@ -33,97 +40,7 @@ describe("EntryPoint and Account Contracts", function () {
   it("should create a new account and assign the correct owner", async function () {
     expect(await account.owner()).to.equal(user.address);
   });
-
-//   it("should validate the user operation signature correctly", async function () {
-//     // Create a sample user operation (sending a transaction)
-//     const target = owner.address;
-//     const value = ethers.utils.parseEther("1");
-//     const data = "0x";
-    
-//     // Create userOpHash
-//     const userOpHash = keccak256(
-//       defaultAbiCoder.encode(
-//         ["address", "address", "uint256", "bytes"],
-//         [account.address, target, value, data]
-//       )
-//     );
-
-//     // Sign the userOpHash
-//     const messageHashBytes = Buffer.from(userOpHash.slice(2), "hex");
-//     const privateKey = Buffer.from(user.privateKey.slice(2), "hex");
-//     const { r, s, v } = ecsign(messageHashBytes, privateKey);
-
-//     // Prepare the signature
-//     const signature = solidityPack(["bytes32", "bytes32", "uint8"], [r, s, v]);
-
-//     // Handle the transaction via EntryPoint
-//     await expect(
-//       entryPoint.handleTransaction(account.address, target, value, data, signature)
-//     ).to.be.revertedWith("Invalid signature");
-//   });
 });
-
-// describe("EntryPointWithoutSignature and Account Contracts", function () {
-//     let entryPoint;
-//     let account;
-//     let owner;
-//     let user;
-  
-//     beforeEach(async function () {
-//       // Get accounts
-//       [owner, user] = await ethers.getSigners();
-  
-//       // Deploy EntryPoint contract
-//       const EntryPoint = await ethers.getContractFactory("EntryPointWithoutSignature");
-//       entryPoint = await EntryPoint.deploy();
-//       await entryPoint.deployed();
-  
-//       // Call EntryPoint to create a new account
-//       const newAccountTx = await entryPoint.createAccount(user.address);
-//       const txReceipt = await newAccountTx.wait();
-  
-//       // Get the new account address from emitted events
-//       const newAccountAddress = txReceipt.events[0].args.accountAddress;
-      
-//       // Check if the new account was deployed correctly
-//       account = await ethers.getContractAt("Account", newAccountAddress);
-//     });
-  
-//     it("should create a new account and assign the correct owner", async function () {
-//       expect(await account.owner()).to.equal(user.address);
-//     });
-  
-//     it("should handle transaction correctly", async function () {
-//       // Create a sample user operation (sending a transaction)
-//       const target = owner.address;
-//       const value = ethers.utils.parseEther("1");
-//       const data = "0x";
-  
-//       // Handle the transaction via EntryPoint
-//       await expect(
-//         entryPoint.handleTransaction(account.address, target, value, data)
-//       ).to.be.revertedWith("Transaction failed");
-
-//       // Send balance to account contract
-//       const amountToSend = ethers.utils.parseEther("2.0"); // 2 Ether
-
-//       // Send funds to the recipient account
-//       await expect(() => owner.sendTransaction({
-//         to: account.address,
-//         value: amountToSend,
-//       })).to.changeEtherBalance(account, amountToSend);
-
-//       // Verify that the recipient account balance is updated correctly
-//       expect(await ethers.provider.getBalance(account.address)).to.equal(amountToSend);
-
-//       // Handle the transaction via EntryPoint
-//       const handleTx = await entryPoint.handleTransaction(account.address, target, value, data);
-//       const txReceipt = await handleTx.wait();
-//       expect(
-//         txReceipt
-//       ).to.be.equal(true);
-//     });
-//   });
   
 describe("EntryPointWithoutSignature and Account Contracts", function () {
   let entryPoint;
@@ -144,9 +61,18 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
     const commandId = ethers.utils.formatBytes32String("commandId");
     const sourceChain = "sourceChain";
     const sourceAddress = user.address;
+
+    const message = Buffer.from(TX_BYTES_A_1, 'base64');
+    const signature = Buffer.from(SIGNATURE_A_1, 'base64');
+
+    const r = '0x' + signature.subarray(0, 32).toString('hex');
+    const s = '0x' + signature.subarray(32, 64).toString('hex');
+
+    const messageHash = sha256(message);
+
     const payload = ethers.utils.defaultAbiCoder.encode(
-      ["uint8", "address"],
-      [1, owner.address],
+      ["uint8", "address", "bytes32", "bytes32", "bytes32"],
+      [1, owner.address, messageHash, r, s],
     );
 
     await mockGateway.setCallValid(true);
@@ -165,23 +91,33 @@ describe("EntryPointWithoutSignature and Account Contracts", function () {
     expect(await ethers.provider.getBalance(account.address)).to.gt(0);
   });
 
+  it("should have signer", async function () {
+    expect(await account.getSigner()).to.equal(EXPECTED_SIGNER);
+  });
+
   it("should execute transactions from Account contract", async function () {
     const recipient = user.address;
     const initialOwnerBalance = await ethers.provider.getBalance(recipient);
     const amountToSend = ethers.utils.parseEther("0.001");
 
-    const data = account.interface.encodeFunctionData("executeTransaction", [recipient, amountToSend, "0x"]);
-    console.log("executeTransaction data :", data)
-
     // Execute transaction from the Account contract
     const commandId = ethers.utils.formatBytes32String("commandId");
     const sourceChain = "sourceChain";
-    const sourceAddress = "sourceAddress";
+    const sourceAddress = user.address;
+
+    const message = Buffer.from(TX_BYTES_A_1, 'base64');
+    const signature = Buffer.from(SIGNATURE_A_1, 'base64');
+
+    const r = '0x' + signature.subarray(0, 32).toString('hex');
+    const s = '0x' + signature.subarray(32, 64).toString('hex');
+
+    const messageHash = sha256(message);
+
     const payload = ethers.utils.defaultAbiCoder.encode(
-      ["uint8", "address", "bytes"],
-      [2, account.address, data],
+      ["uint8", "address", "bytes32", "bytes32", "bytes32", "address", "uint256", "bytes"],
+      [2, account.address, messageHash, r, s, recipient, amountToSend, "0x"],
     );
-    console.log("Payload :", payload, "\n")
+    console.log("payload :", payload)
     await entryPoint.execute(commandId, sourceChain, sourceAddress, payload);
 
     // Verify that the owner received the Ether

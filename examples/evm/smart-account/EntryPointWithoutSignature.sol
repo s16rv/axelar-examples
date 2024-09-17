@@ -6,11 +6,16 @@ import { IAxelarGateway } from '@axelar-network/axelar-gmp-sdk-solidity/contract
 import { IAxelarGasService } from '@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol';
 import "./AccountWithoutSignature.sol";
 
+interface IAccount {
+    function validateOperation(bytes32 messageHash, bytes32 r, bytes32 s) external view returns (bool);
+    function executeTransaction(address dest, uint256 value, bytes calldata data) external returns (bool);
+}
+
 contract EntryPointWithoutSignature is AxelarExecutable {
     IAxelarGasService public immutable gasService;
 
     event Executed(string sourceChain, string sourceAddress);
-    event TransactionExecuted(address indexed target, bytes data);
+    event TransactionExecuted(address indexed target, bytes txPayload);
     event AccountCreated(address indexed accountAddress, address indexed owner);
 
     /**
@@ -60,21 +65,23 @@ contract EntryPointWithoutSignature is AxelarExecutable {
 
         if (category == 1) {
             // Handle category 2: createAccount
-            (address owner) = abi.decode(_payload[32:], (address));
+            (address owner, bytes32 messageHash, bytes32 r, bytes32 s) = abi.decode(_payload[32:], (address, bytes32, bytes32, bytes32));
             
-            createAccount(owner);
+            _createAccount(owner, messageHash, r, s);
         } 
         else if (category == 2) {
             // Handle category 2: handleTransaction
             // Check that the payload is large enough to contain both an address and the data
-            require(_payload.length > 32 + 20, "Payload too short");
+            require(_payload.length > 160 + 20, "Payload too short");
 
-            // Decode the address first
-            address target = abi.decode(_payload[32:64], (address));
+            // Decode the address and the signature components
+            (address target, bytes32 messageHash, bytes32 r, bytes32 s) = abi.decode(_payload[32:160], (address, bytes32, bytes32, bytes32));
 
             // Decode the rest as bytes
-            bytes calldata data = _payload[128:];
-            handleTransaction(target, data);
+            bytes calldata txPayload = _payload[160:];
+
+            // Call _handleTransaction with the additional parameters
+            _handleTransaction(target, messageHash, r, s, txPayload);
         } 
         else {
             revert("Unsupported category");
@@ -84,18 +91,29 @@ contract EntryPointWithoutSignature is AxelarExecutable {
         emit Executed(_sourceChain, _sourceAddress);
     }
 
-    function handleTransaction(
+    function _handleTransaction(
         address target,
-        bytes calldata data
-    ) public {
-        (bool success, ) = target.call(data);
-        require(success, "Transaction failed");
+        bytes32 messageHash,
+        bytes32 r,
+        bytes32 s,
+        bytes calldata txPayload
+    ) internal {
+        require(IAccount(target).validateOperation(messageHash, r, s), "Invalid signature");
 
-        emit TransactionExecuted(target, data);
+        (address dest, uint256 value) = abi.decode(txPayload, (address, uint256));
+        require(IAccount(target).executeTransaction(dest, value, txPayload[64:]), "Transaction failed");
+        
+        emit TransactionExecuted(target, txPayload);
     }
 
-    function createAccount(address owner) public returns (address) {
-        AccountWithoutSignature newAccount = new AccountWithoutSignature(owner, address(this));
+    function _createAccount(
+        address owner,
+        bytes32 messageHash,
+        bytes32 r,
+        bytes32 s
+    ) internal returns (address) {
+        AccountWithoutSignature newAccount = new AccountWithoutSignature(owner, address(this), messageHash, r, s);
+        
         emit AccountCreated(address(newAccount), owner);
         return address(newAccount);
     }
