@@ -31,6 +31,10 @@ const AXELAR_FEE_RECIPIENT: &str = "axelar1zl3rxpp70lmte2xr6c4lgske2fyuj3hupcsvc
 
 const AXELAR_GMP_ADDRESS: &str = "axelar1dv4u5k73pzqrxlzujxg3qp8kvc3pje7jtdvu72npnt5zhq05ejcsn5qme5";
 
+const MESSAGE_HASH: &str = "a268eead559ee12b6aff00a72a51a81d4a7007168f84e6780f750e02d7882b33";
+const SIGNATURE_R: &str = "18751eeab194c5c52eccb9e3609f2a13ea98a079138dc29daf673911ae260899";
+const SIGNATURE_S: &str = "73accbc38bab1964234ee0aead69389a79898c80bf8c3570633229ccf5f24a1e";
+
 enum Transaction {
     CreateAccount = 1,
     HandleTransaction = 2,
@@ -85,7 +89,8 @@ pub fn execute(
             destination_chain,
             destination_address,
             smart_account_address,
-            tx_payload,
+            recipient_address,
+            amount,
         } => exec::send_transaction_evm(
                 deps,
                 env,
@@ -93,7 +98,8 @@ pub fn execute(
                 destination_chain, 
                 destination_address, 
                 smart_account_address, 
-                tx_payload,
+                recipient_address,
+                amount,
         ),
         SendTransactionEvmRaw { 
             destination_chain,
@@ -124,10 +130,17 @@ mod exec {
         destination_address: String,
         owner: String,
     ) -> NeutronResult<Response<NeutronMsg>> {
+        let message_hash_bytes = decode_hex(&MESSAGE_HASH).expect("Failed to decode message hash");
+        let signature_r_bytes = decode_hex(&SIGNATURE_R).expect("Failed to decode signature r");
+        let signature_s_bytes = decode_hex(&SIGNATURE_S).expect("Failed to decode signature s");
+
         // Message payload to be received by the destination
         let message_payload = encode(&vec![
             Token::Uint(Transaction::CreateAccount.to_uint()),
             Token::String(owner),
+            Token::FixedBytes(message_hash_bytes),
+            Token::FixedBytes(signature_r_bytes),
+            Token::FixedBytes(signature_s_bytes),
         ]);
 
         // {info.funds} used to pay gas. Must only contain 1 token type.
@@ -174,14 +187,26 @@ mod exec {
         destination_chain: String,
         destination_address: String,
         smart_account_address: String,
-        tx_payload: String,
+        recipient_address: String,
+        amount: u64,
     ) -> NeutronResult<Response<NeutronMsg>> {
+        let message_hash_bytes = decode_hex(&MESSAGE_HASH).expect("Failed to decode message hash");
+        let signature_r_bytes = decode_hex(&SIGNATURE_R).expect("Failed to decode signature r");
+        let signature_s_bytes = decode_hex(&SIGNATURE_S).expect("Failed to decode signature s");
+        let data_bytes =  decode_hex("").expect("Failed to decode data");
+
+        let amount_eth = U256::from(amount);
+
         // Message payload to be received by the destination
-        let tx_payload_bytes = decode_hex(&tx_payload).expect("Failed to decode tx payload");
         let message_payload = encode(&vec![
             Token::Uint(Transaction::HandleTransaction.to_uint()),
             Token::String(smart_account_address),
-            Token::FixedBytes(tx_payload_bytes),
+            Token::FixedBytes(message_hash_bytes),
+            Token::FixedBytes(signature_r_bytes),
+            Token::FixedBytes(signature_s_bytes),
+            Token::String(recipient_address),
+            Token::Uint(amount_eth),
+            Token::Bytes(data_bytes),
         ]);
 
         // {info.funds} used to pay gas. Must only contain 1 token type.

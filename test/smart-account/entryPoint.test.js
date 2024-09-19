@@ -39,8 +39,9 @@ describe("EntryPoint and Account Contracts", function () {
 
     const payload = ethers.utils.defaultAbiCoder.encode(
       ["uint8", "address", "bytes32", "bytes32", "bytes32"],
-      [1, owner.address, messageHash, r, s],
+      [1, "0x390dc2368bfde7e7a370af46c0b834b718d570c1", messageHash, r, s],
     );
+    console.log(messageHash, r, s)
 
     await mockGateway.setCallValid(true);
     const tx = await entryPoint.execute(commandId, sourceChain, sourceAddress, payload);
@@ -84,6 +85,12 @@ describe("EntryPoint and Account Contracts", function () {
       ["uint8", "address", "bytes32", "bytes32", "bytes32", "address", "uint256", "bytes"],
       [2, account.address, messageHash, r, s, recipient, amountToSend, "0x"],
     );
+    // const payload = ethers.utils.defaultAbiCoder.encode(
+    //   ["uint8", "address", "bytes32", "bytes32", "bytes32", "address", "uint256", "bytes"],
+    //   [2, "0xAecAa6210e3E3AA66e0753B24E61B97F7b045d7D", messageHash, r, s, "0x390dc2368bfde7e7a370af46c0b834b718d570c1", amountToSend, "0x"],
+    // );
+    // console.log(payload)
+    
     await entryPoint.execute(commandId, sourceChain, sourceAddress, payload);
 
     // Verify that the owner received the Ether

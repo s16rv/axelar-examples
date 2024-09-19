@@ -6,13 +6,14 @@ import "./SignatureVerifier.sol";
 
 contract Account is SignatureVerifier {
     address public owner;
-    address private immutable _signer;
+    address public immutable signer;
     EntryPoint private immutable _entryPoint;
 
     uint8 private constant SIGNATURE_V = 27;
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event TransactionExecuted(address indexed dest, uint256 value, bytes data);
+    event AccountInitialized(address indexed owner, address indexed signer);
 
     constructor(
         address _owner,
@@ -23,7 +24,9 @@ contract Account is SignatureVerifier {
     ) {
         owner = _owner;
         _entryPoint = EntryPoint(_entryPointAddr);
-        _signer = recoverSigner(_messageHash, _r, _s, SIGNATURE_V);
+        signer = recoverSigner(_messageHash, _r, _s, SIGNATURE_V);
+
+        emit AccountInitialized(_owner, signer);
     }
 
     modifier onlyOwner() {
@@ -37,7 +40,7 @@ contract Account is SignatureVerifier {
     }
 
     function getSigner() public view returns (address) {
-        return _signer;
+        return signer;
     }
 
     // Allow the owner to change the account owner
@@ -48,7 +51,7 @@ contract Account is SignatureVerifier {
 
     // Validate operation by checking the signature
     function validateOperation(bytes32 messageHash, bytes32 r, bytes32 s) external view returns (bool) {
-        return verifySignature(messageHash, r, s, SIGNATURE_V, _signer);
+        return verifySignature(messageHash, r, s, SIGNATURE_V, signer);
     }
 
     // Allow the contract to execute arbitrary transactions

@@ -4,11 +4,13 @@ const {
     utils: { deployContract },
 } = require('@axelar-network/axelar-local-dev');
 
-const EntryPoint = rootRequire('./artifacts/examples/evm/smart-account/EntryPointWithoutSignature.sol/EntryPointWithoutSignature.json');
+const EntryPoint = rootRequire('./artifacts/examples/evm/smart-account/EntryPoint.sol/EntryPoint.json');
 
 async function deploy(chain, wallet) {
     console.log(`Deploying EntryPoint for ${chain.name}.`);
-    chain.contract = await deployContract(wallet, EntryPoint, [chain.gateway, chain.gasService]);
+    chain.contract = await deployContract(wallet, EntryPoint, [chain.gateway, chain.gasService], {
+        gasLimit: 80000000, // Increase gas limit (adjust this value as needed)
+      });
     chain.wallet = wallet;
     console.log(`Deployed EntryPoint for ${chain.name} at ${chain.contract.address}.`);
 }

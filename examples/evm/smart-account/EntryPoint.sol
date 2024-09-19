@@ -17,6 +17,8 @@ contract EntryPoint is AxelarExecutable {
     event Executed(string sourceChain, string sourceAddress);
     event TransactionExecuted(address indexed target, bytes txPayload);
     event AccountCreated(address indexed accountAddress, address indexed owner);
+    event TransactionHandled(address indexed dest, uint256 value, bytes payload);
+    event SignatureValidated(bytes32 messageHash, bytes32 r, bytes32 s);
 
     /**
      *
@@ -99,8 +101,11 @@ contract EntryPoint is AxelarExecutable {
         bytes calldata txPayload
     ) internal {
         require(IAccount(target).validateOperation(messageHash, r, s), "Invalid signature");
+        emit SignatureValidated(messageHash, r, s);
 
         (address dest, uint256 value) = abi.decode(txPayload, (address, uint256));
+        emit TransactionHandled(dest, value, txPayload[64:]);
+
         require(IAccount(target).executeTransaction(dest, value, txPayload[64:]), "Transaction failed");
         
         emit TransactionExecuted(target, txPayload);

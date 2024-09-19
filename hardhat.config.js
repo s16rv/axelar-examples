@@ -1,6 +1,7 @@
 require('hardhat-gas-reporter');
 require('solidity-coverage');
 require("@nomicfoundation/hardhat-chai-matchers")
+require("dotenv").config();
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -33,4 +34,10 @@ module.exports = {
         sources: './examples',
         artifacts: './artifacts',
     },
+    networks: {
+        sepolia: {
+          url: "https://ethereum-sepolia-rpc.publicnode.com",
+          accounts: [process.env.EVM_PRIVATE_KEY],
+        },
+      },
 };
